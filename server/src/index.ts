@@ -3,6 +3,10 @@ import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import prisma from "./config/db.config";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+dotenv.config();
+
 const app = express();
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
@@ -32,14 +36,16 @@ io.on("connection", (socket) => {
 
 app.post("/signup", async (req, res) => {
   const { email, password, name } = req.body;
-  bcrypt.genSaltSync(11);
-  // await prisma.user.create({
-  //   data: {
-  //     email,
-  //     name,
-  //     password: hashedPassword,
-  //   },
-  //   });
+  const salt = bcrypt.genSaltSync(10);
+  const hashedPassword = bcrypt.hashSync(password, salt);
+  await prisma.user.create({
+    data: {
+      email,
+      name,
+      password: hashedPassword,
+    },
+  });
+  res.json({ message: "Signed up!", success: true });
 });
 
 app.post("/login", async (req, res) => {
@@ -48,7 +54,20 @@ app.post("/login", async (req, res) => {
   if (!foundUser) {
     res.json({ message: "No user found" });
   }
+  if (!bcrypt.compareSync(password, foundUser?.password!)) {
+    res.json({ message: "password dont match" });
+  }
+  const token = jwt.sign(
+    {
+      name: foundUser?.name,
+    },
+    process.env.JWT_SECRET!,
+    { expiresIn: "1h" }
+  );
+  res.cookie("jwt_token", token);
+  res.json({ message: "Cookie has been set!", success: true });
 });
+
 const PORT = 3001;
 
 server.listen(PORT, () => {

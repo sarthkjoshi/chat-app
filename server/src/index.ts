@@ -5,7 +5,7 @@ import prisma from "./config/db.config";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import authMiddleware from "./middleware/authMiddleware";
+import authMiddleware, { CustomRequest } from "./middleware/authMiddleware";
 import cookieParser from "cookie-parser";
 dotenv.config();
 
@@ -38,8 +38,8 @@ const server = http.createServer(app);
 // });
 app.use(express.json());
 app.use(cookieParser());
-app.get("/", authMiddleware, (req, res) => {
-  res.send("hello");
+app.get("/", authMiddleware, (req: CustomRequest, res) => {
+  res.send(req.user);
 });
 
 app.post("/signup", async (req, res) => {
@@ -72,8 +72,8 @@ app.post("/login", async (req, res) => {
     process.env.JWT_SECRET!,
     { expiresIn: "1h" }
   );
-  res.cookie("jwt_token", token);
-  res.json({ message: "Cookie has been set!", success: true });
+
+  res.json({ token: token, success: true });
 });
 
 const PORT = 3001;
